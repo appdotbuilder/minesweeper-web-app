@@ -1,39 +1,28 @@
+import { db } from '../db';
+import { highScoresTable } from '../db/schema';
 import { type GetLeaderboardInput, type HighScore } from '../schema';
+import { eq, asc } from 'drizzle-orm';
 
 export async function getLeaderboard(input: GetLeaderboardInput): Promise<HighScore[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is:
-    // 1. Query high scores from the database
-    // 2. Filter by difficulty if specified, otherwise return all
-    // 3. Sort by duration_seconds in ascending order (fastest times first)
-    // 4. Limit results to the specified limit (default 10)
-    // 5. Only include completed games (won status)
-    // 6. Return the leaderboard data for display
-    
-    // Placeholder response with sample high scores
-    const sampleScores: HighScore[] = [
-        {
-            id: 1,
-            player_name: "Alice",
-            difficulty: input.difficulty || 'beginner',
-            duration_seconds: 45,
-            created_at: new Date(),
-        },
-        {
-            id: 2,
-            player_name: "Bob",
-            difficulty: input.difficulty || 'beginner',
-            duration_seconds: 67,
-            created_at: new Date(),
-        },
-        {
-            id: 3,
-            player_name: "Charlie",
-            difficulty: input.difficulty || 'beginner',
-            duration_seconds: 89,
-            created_at: new Date(),
-        },
-    ];
-    
-    return sampleScores.slice(0, input.limit || 10);
+  try {
+    // Build query conditionally without reassigning to maintain type inference
+    const results = input.difficulty
+      ? await db.select()
+          .from(highScoresTable)
+          .where(eq(highScoresTable.difficulty, input.difficulty))
+          .orderBy(asc(highScoresTable.duration_seconds))
+          .limit(input.limit)
+          .execute()
+      : await db.select()
+          .from(highScoresTable)
+          .orderBy(asc(highScoresTable.duration_seconds))
+          .limit(input.limit)
+          .execute();
+
+    // Return the high scores (no numeric conversions needed - all fields are integers/text)
+    return results;
+  } catch (error) {
+    console.error('Get leaderboard failed:', error);
+    throw error;
+  }
 }
